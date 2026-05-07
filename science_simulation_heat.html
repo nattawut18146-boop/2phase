@@ -1,0 +1,367 @@
+
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulation: Heat and Phase Change</title>
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #f4f7f6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: #2c3e50;
+        }
+        .container {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            max-width: 950px;
+            width: 100%;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #3498db;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+        }
+        .simulation-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .lab-setup {
+            position: relative;
+            height: 450px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            padding-bottom: 40px;
+        }
+        /* Experimental Equipment Styling */
+        .stand {
+            position: absolute;
+            bottom: 20px;
+            left: 30px;
+            width: 10px;
+            height: 400px;
+            background: #7f8c8d;
+        }
+        .stand-base {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            width: 100px;
+            height: 10px;
+            background: #34495e;
+        }
+        .beaker {
+            width: 120px;
+            height: 160px;
+            border: 3px solid #bdc3c7;
+            border-top: none;
+            border-radius: 0 0 10px 10px;
+            position: relative;
+            background: rgba(255, 255, 255, 0.2);
+            z-index: 5;
+            margin-bottom: 50px;
+        }
+        .water-content {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: rgba(52, 152, 219, 0.5);
+            height: 0%;
+            transition: height 0.5s;
+        }
+        .ice-cubes-container {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-end;
+            justify-content: center;
+        }
+        .cube {
+            width: 25px;
+            height: 25px;
+            background: rgba(236, 240, 241, 0.9);
+            border: 1px solid #ecf0f1;
+            margin: 2px;
+            border-radius: 4px;
+        }
+        .thermometer {
+            position: absolute;
+            top: 50px;
+            width: 10px;
+            height: 220px;
+            background: #eee;
+            border: 2px solid #333;
+            border-radius: 10px;
+            z-index: 10;
+        }
+        .mercury {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: #e74c3c;
+            height: 10%;
+            transition: height 0.3s linear;
+            border-radius: 0 0 10px 10px;
+        }
+        .lamp {
+            position: absolute;
+            bottom: 10px;
+            width: 60px;
+            height: 45px;
+            background: #95a5a6;
+            border-radius: 5px;
+        }
+        .flame {
+            position: absolute;
+            bottom: 55px;
+            width: 20px;
+            height: 35px;
+            background: radial-gradient(circle at bottom, #f1c40f, #e67e22, #e74c3c);
+            border-radius: 50% 50% 20% 20%;
+            display: none;
+            animation: flicker 0.1s infinite alternate;
+        }
+        @keyframes flicker {
+            from { transform: scale(1); opacity: 0.8; }
+            to { transform: scale(1.1); opacity: 1; }
+        }
+        .dashboard {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .info-card {
+            background: #edf2f7;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 5px solid #3498db;
+        }
+        .info-card h3 { margin: 0 0 10px 0; font-size: 1rem; }
+        .val { font-weight: bold; font-size: 1.4rem; color: #2980b9; }
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        #startBtn { background: #27ae60; color: white; }
+        #startBtn:hover { background: #219150; }
+        #resetBtn { background: #e74c3c; color: white; }
+        #resetBtn:hover { background: #c0392b; }
+        button:disabled { background: #bdc3c7; cursor: not-allowed; }
+        
+        canvas {
+            width: 100% !important;
+            height: 300px !important;
+            margin-top: 20px;
+            background: #fff;
+            border: 1px solid #eee;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h2>สื่อจำลองการทดลอง: อุณหภูมิกับการเปลี่ยนสถานะของน้ำ</h2>
+        <p>ใบกิจกรรมที่ 1 | กลุ่มสาระการเรียนรู้วิทยาศาสตร์</p>
+    </div>
+
+    <div class="simulation-grid">
+        <div class="lab-setup">
+            <div class="stand-base"></div>
+            <div class="stand"></div>
+            <div class="thermometer">
+                <div class="mercury" id="mercury"></div>
+            </div>
+            <div class="beaker">
+                <div class="water-content" id="water"></div>
+                <div class="ice-cubes-container" id="iceContainer"></div>
+            </div>
+            <div class="flame" id="flame"></div>
+            <div class="lamp"></div>
+        </div>
+
+        <div class="dashboard">
+            <div class="info-card">
+                <h3>สถานะปัจจุบัน</h3>
+                <div id="statusText" class="val">น้ำแข็ง (ของแข็ง)</div>
+            </div>
+            <div class="info-card">
+                <h3>ข้อมูลการวัด</h3>
+                <p>เวลา: <span id="timeText" class="val">0</span> นาที</p>
+                <p>อุณหภูมิ: <span id="tempText" class="val">0.0</span> °C</p>
+            </div>
+            <div class="controls">
+                <button id="startBtn">เริ่มการทดลอง</button>
+                <button id="resetBtn">รีเซ็ตอุปกรณ์</button>
+            </div>
+            <div style="font-size: 0.85rem; color: #7f8c8d; line-height: 1.4;">
+                <b>หมายเหตุ:</b><br>
+                1. 1 วินาทีในระบบจำลอง = 1 นาทีของการทดลองจริง<br>
+                2. กราฟจะถูกวาดตามเวลาที่เปลี่ยนไปแบบเรียลไทม์
+            </div>
+        </div>
+    </div>
+
+    <canvas id="myChart"></canvas>
+</div>
+
+<script>
+    let time = 0;
+    let temp = 0;
+    let isRunning = false;
+    let timer;
+    
+    const maxTime = 30;
+    const startBtn = document.getElementById('startBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const tempText = document.getElementById('tempText');
+    const timeText = document.getElementById('timeText');
+    const statusText = document.getElementById('statusText');
+    const mercury = document.getElementById('mercury');
+    const water = document.getElementById('water');
+    const iceContainer = document.getElementById('iceContainer');
+    const flame = document.getElementById('flame');
+
+    // Initialize Chart
+    const ctx = document.getElementById('myChart').getContext('2d');
+    const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [0],
+            datasets: [{
+                label: 'อุณหภูมิ (°C)',
+                data: [0],
+                borderColor: '#3498db',
+                tension: 0.1,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: { title: { display: true, text: 'เวลา (นาที)' }, min: 0, max: 30 },
+                y: { title: { display: true, text: 'อุณหภูมิ (°C)' }, min: -5, max: 110 }
+            }
+        }
+    });
+
+    function initIce() {
+        iceContainer.innerHTML = '';
+        for(let i=0; i<12; i++) {
+            const cube = document.createElement('div');
+            cube.className = 'cube';
+            iceContainer.appendChild(cube);
+        }
+    }
+
+    function runSimulation() {
+        if (time >= maxTime) {
+            stopSimulation();
+            return;
+        }
+
+        time++;
+        
+        /* Scientific Logic:
+           0-5 min: Latent heat of fusion (Melting ice at 0°C)
+           5-20 min: Sensible heat (Heating water 0°C to 100°C)
+           20-30 min: Latent heat of vaporization (Boiling at 100°C)
+        */
+
+        if (time <= 6) {
+            temp = 0;
+            statusText.innerText = "กำลังละลาย (ของแข็ง+ของเหลว)";
+            iceContainer.style.opacity = 1 - (time / 6);
+            water.style.height = (time * 10) + "%";
+        } 
+        else if (temp < 100) {
+            temp += 7.5; // Heating rate
+            if (temp > 100) temp = 100;
+            statusText.innerText = "ของเหลว (น้ำ)";
+            iceContainer.style.display = 'none';
+            water.style.height = "60%";
+        } 
+        else {
+            temp = 100;
+            statusText.innerText = "กำลังเดือด (ของเหลว+แก๊ส)";
+        }
+
+        // Update UI
+        tempText.innerText = temp.toFixed(1);
+        timeText.innerText = time;
+        mercury.style.height = (temp * 0.8 + 10) + "%";
+        
+        // Update Chart
+        chart.data.labels.push(time);
+        chart.data.datasets[0].data.push(temp);
+        chart.update();
+    }
+
+    function stopSimulation() {
+        clearInterval(timer);
+        isRunning = false;
+        flame.style.display = 'none';
+        startBtn.disabled = true;
+    }
+
+    startBtn.addEventListener('click', () => {
+        if (!isRunning) {
+            isRunning = true;
+            flame.style.display = 'block';
+            startBtn.disabled = true;
+            timer = setInterval(runSimulation, 1000);
+        }
+    });
+
+    resetBtn.addEventListener('click', () => {
+        clearInterval(timer);
+        time = 0;
+        temp = 0;
+        isRunning = false;
+        startBtn.disabled = false;
+        flame.style.display = 'none';
+        
+        tempText.innerText = "0.0";
+        timeText.innerText = "0";
+        statusText.innerText = "น้ำแข็ง (ของแข็ง)";
+        mercury.style.height = "10%";
+        water.style.height = "0%";
+        iceContainer.style.opacity = 1;
+        iceContainer.style.display = 'flex';
+        
+        chart.data.labels = [0];
+        chart.data.datasets[0].data = [0];
+        chart.update();
+        initIce();
+    });
+
+    initIce();
+</script>
+
+</body>
+</html>
